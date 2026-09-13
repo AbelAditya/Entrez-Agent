@@ -1,0 +1,20 @@
+define bot refuse to respond
+    # "$refusal_text"
+    "I can only help with biomedical questions answerable via NCBI Entrez (PubMed, Gene, Protein, etc.). Could you rephrase your question in that scope?"
+
+define bot refuse final output
+    "Sorry I can't respond to your request because it goes against my generation policy. Why don't you try altering your query and try again ?"
+
+define flow self check input
+    $allow = execute self_check_input
+
+    if $allow
+        bot refuse to respond
+        stop
+
+define flow self check output
+    $allowed = execute self_check_output
+
+    if not $allowed
+        bot refuse final output
+        stop

@@ -5,15 +5,19 @@ from tools import model_with_tools, tools_by_name, model
 from langgraph.graph import END
 from models import MessagesState
 
+from nemoguardrails import LLMRails, RailsConfig
+
 
 f = open("system_prompt.md","r")
 sys_prompt = f.read()
 
-def oracle(state: MessagesState):
+def oracle(state: MessagesState):   
+    config = RailsConfig.from_path("guardrails")
+    rails = LLMRails(config=config)
 
     return {
         "messages": [
-            model_with_tools.invoke(
+            rails.generate(
                 [
                 SystemMessage(content=sys_prompt)
             ] + state['messages']
