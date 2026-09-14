@@ -1,30 +1,10 @@
-from langgraph.graph import StateGraph, START, END
-from models import MessagesState
-from nodes import oracle, tool_node, should_continue
+from agent import entrez_agent
 from langchain.messages import HumanMessage
 
-graph = StateGraph(MessagesState)
+query = input("Enter you query: ")
+msgs = [HumanMessage(content=query)]
 
-# Adding nodes
-graph.add_node("oracle",oracle)
-graph.add_node("tool_node",tool_node)
+result = entrez_agent.invoke({"messages":msgs})
 
-# Adding Edges
-graph.add_edge(START, "oracle")
-graph.add_conditional_edges(
-    "oracle",
-    should_continue,
-    ["tool_node",END]
-)
-graph.add_edge("tool_node","oracle")
-
-agent = graph.compile()
-
-a = input("Enter Query: ")
-messages = [HumanMessage(content=a)]
-messages = agent.invoke({"messages":messages})
-
-for m in messages['messages']:
+for m in result['messages']:
     m.pretty_print()
-
-

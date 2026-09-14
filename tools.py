@@ -5,7 +5,7 @@ import os
 import re
 from urllib.error import HTTPError, URLError
 from langchain.tools import tool
-from langchain_openrouter import ChatOpenRouter
+
 from typing_extensions import List, Literal, Optional
 
 load_dotenv()
@@ -447,14 +447,5 @@ def e_link(
         links[name] = [entry["Id"] for entry in linkset.get("Link", [])]
     return {"links": links}
 
-model = ChatOpenRouter(
-    model="cohere/north-mini-code:free",
-    temperature=0.5,
-    api_key=os.getenv('OPENROUTER_API_KEY')
-)
-
 tools = [e_fetch,e_info,e_link,e_post,e_search,e_summary]
 tools_by_name = {tool.name: tool for tool in tools}
-
-
-model_with_tools = model.bind_tools(tools)
