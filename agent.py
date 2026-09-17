@@ -17,8 +17,8 @@ entrez_agent = create_agent(
     model=ChatOpenRouter(
         model="openrouter/free",
         temperature=0.5,
-        api_key=os.getenv('OPENROUTER_API_KEY_2'),
-        rate_limiter=limiter('OPENROUTER_API_KEY_2'),
+        api_key=os.getenv('OPENROUTER_API_KEY'),
+        rate_limiter=limiter('OPENROUTER_API_KEY'),
     ),
     tools=tools,
     middleware=[
@@ -27,8 +27,8 @@ entrez_agent = create_agent(
         SummarizationMiddleware(model=ChatOpenRouter(
             model="openrouter/free",
             temperature=0,
-            api_key=os.getenv('OPENROUTER_API_KEY_2'),
-            rate_limiter=limiter('OPENROUTER_API_KEY_2'),
+            api_key=os.getenv('OPENROUTER_API_KEY'),
+            rate_limiter=limiter('OPENROUTER_API_KEY'),
         ),
         trigger=("tokens", 70000),
         keep=("messages", 15)

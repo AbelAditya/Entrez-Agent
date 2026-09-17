@@ -21,7 +21,7 @@ def latest_human_text(messages) -> Optional[str]:
     """
     for message in reversed(messages):
         if isinstance(message, HumanMessage):
-            return message.text() if hasattr(message, "text") else str(message.content)
+            return message.text if hasattr(message, "text") else str(message.content)
     return None
 
 
@@ -33,8 +33,8 @@ class ContentCheckMiddleware(AgentMiddleware):
         self.model = ChatOpenRouter(
             model=model,
             temperature=0,
-            api_key=os.getenv('OPENROUTER_API_KEY_2'),
-            rate_limiter=limiter('OPENROUTER_API_KEY_2'),
+            api_key=os.getenv('OPENROUTER_API_KEY'),
+            rate_limiter=limiter('OPENROUTER_API_KEY'),
         )
         store = store or KeyValueStore()
         self.input_cache = VerdictCache(store, "in", input_check_prompt, model)
@@ -80,7 +80,7 @@ class ContentCheckMiddleware(AgentMiddleware):
             return None
 
         last = state['messages'][-1]
-        text = last.text() if hasattr(last, "text") else str(last.content)
+        text = last.text if hasattr(last, "text") else str(last.content)
         if not text:
             return None
 
