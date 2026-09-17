@@ -1,12 +1,10 @@
 from langchain.agents.middleware import AgentMiddleware, hook_config
 from langchain.messages import AIMessage
 from langchain_openrouter import ChatOpenRouter
+from ratelimits import limiter
 import os
-from dotenv import load_dotenv
 
 from typing import Optional
-
-load_dotenv()
 
 class ContentCheckMiddleware(AgentMiddleware):
     def __init__(self, input_check_prompt: Optional[str], output_check_prompt: Optional[str], model: str = "cohere/north-mini-code:free"):
@@ -16,7 +14,8 @@ class ContentCheckMiddleware(AgentMiddleware):
         self.model = ChatOpenRouter(
             model=model,
             temperature=0,
-            api_key=os.getenv('OPENROUTER_API_KEY'),
+            api_key=os.getenv('OPENROUTER_API_KEY_2'),
+            rate_limiter=limiter('OPENROUTER_API_KEY_2'),
         )
 
     @hook_config(can_jump_to=['end'])

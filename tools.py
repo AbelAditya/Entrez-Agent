@@ -1,14 +1,11 @@
 from Bio import Entrez
 from Bio.Entrez.Parser import CorruptedXMLError, NotXMLError, ValidationError
-from dotenv import load_dotenv
 import os
 import re
 from urllib.error import HTTPError, URLError
 from langchain.tools import tool
 
 from typing_extensions import List, Literal, Optional
-
-load_dotenv()
 
 Entrez.email = os.getenv('ENTREZ_EMAIL')
 Entrez.api_key = os.getenv('ENTREZ_API_KEY')
