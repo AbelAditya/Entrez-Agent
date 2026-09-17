@@ -8,4 +8,5 @@ dependencies = [
     "langchain>=1.4.0",
     "langgraph>=1.2.11",
     "python-dotenv>=1.2.3",
+    "redis>=8.1.0",
 ]
