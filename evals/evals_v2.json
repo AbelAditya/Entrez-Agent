@@ -1,0 +1,162 @@
+{
+  "eval_suite": "entrez_agent_tool_trajectory_evals_v2",
+  "evals": [
+    {
+      "id": "eval_06_citation_relevance_via_elink",
+      "category": "tool_selection",
+      "query": "Find the most influential recent papers on CRISPR off-target effects",
+      "rationale": "\"Most influential\" is a relevance signal that title/abstract matching alone can't capture well; agent should reach for citation data via e_link rather than relying only on esearch/efetch.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search"},
+        {"step": 2, "tool": "e_fetch"},
+        {"step": 3, "tool": "e_link", "args_must_include": {"dbfrom": "pubmed", "db": "pubmed"}, "purpose": "pull citation/related-article links as a relevance signal"}
+      ]
+    },
+    {
+      "id": "eval_07_ambiguous_query_clarification",
+      "category": "safety",
+      "query": "Papers on cold",
+      "rationale": "Genuinely ambiguous (common cold vs. cold temperature/cryo-related research) with no disambiguating context. Agent should ask for clarification rather than silently guessing a single interpretation.",
+      "expected_trajectory": []
+    },
+    {
+      "id": "eval_08_database_selection",
+      "category": "db_selection",
+      "query": "Get me the gene sequence record for BRCA1",
+      "rationale": "This is a sequence-record request, not a literature search; agent must select an appropriate non-pubmed database rather than defaulting to pubmed for every query.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args_must_include": {"db": "nucleotide|gene"}}
+      ]
+    },
+    {
+      "id": "eval_09_no_override_overtriggering",
+      "category": "mapping_verification",
+      "query": "Papers on breast cancer chemotherapy outcomes",
+      "rationale": "Common, unambiguous clinical terms. This eval specifically checks the agent isn't reflexively calling search_mesh on every query regardless of whether the translation looks fine, which would undermine the cost/latency justification for the conditional design.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search"},
+        {"step": 2, "tool": "e_fetch"}
+      ]
+    },
+    {
+      "id": "eval_10_malformed_input_handling",
+      "category": "error_handling",
+      "query": "",
+      "rationale": "Empty or malformed input should be caught before an Entrez call is attempted, not surfaced as a raw API error to the user.",
+      "expected_trajectory": []
+    },
+    {
+      "id": "eval_11_gene_to_literature_link",
+      "category": "cross_db_linking",
+      "query": "Find recent papers discussing the TP53 gene",
+      "rationale": "Query names a gene but asks for literature, not the gene record itself. Agent should resolve the gene identifier first, then link to pubmed, rather than treating 'TP53' as a plain search term in pubmed directly.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args": {"db": "gene", "term": "TP53"}},
+        {"step": 2, "tool": "e_link", "args": {"dbfrom": "gene", "db": "pubmed"}},
+        {"step": 3, "tool": "e_fetch", "args": {"db": "pubmed"}}
+      ]
+    },
+    {
+      "id": "eval_12_full_text_availability",
+      "category": "cross_db_linking",
+      "query": "Get me the full text of papers on CAR-T cell therapy for lymphoma",
+      "rationale": "'Full text' signals PMC, not abstract-only pubmed records. Agent should link from pubmed hits to pmc rather than fetching abstracts and calling it done.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args": {"db": "pubmed"}},
+        {"step": 2, "tool": "e_link", "args": {"dbfrom": "pubmed", "db": "pmc"}},
+        {"step": 3, "tool": "e_fetch", "args": {"db": "pmc", "rettype": "full"}}
+      ]
+    },
+    {
+      "id": "eval_13_synonym_conflict_resolution",
+      "category": "mapping_verification",
+      "query": "Papers on stroke recovery using CI therapy",
+      "rationale": "'CI therapy' is ambiguous shorthand (constraint-induced movement therapy vs. other CI-prefixed terms). Translation should be inspected and, if it maps to the wrong sense, corrected via an explicit mesh lookup.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args": {"db": "pubmed", "term": "stroke recovery AND CI therapy"}},
+        {"step": 2, "tool": "search_mesh", "args": {"term": "constraint-induced movement therapy"}},
+        {"step": 3, "tool": "e_search", "args": {"db": "pubmed"}},
+        {"step": 4, "tool": "e_fetch"}
+      ]
+    },
+    {
+      "id": "eval_14_relative_date_translation",
+      "category": "decomposition",
+      "query": "Papers on RSV vaccines published in the last 6 months",
+      "rationale": "Relative date phrase must be converted into an absolute PDAT range at construction time using the current date, not passed through as free text.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args": {"db": "pubmed", "term": "contains an absolute PDAT range, not the literal phrase 'last 6 months'"}},
+        {"step": 2, "tool": "e_fetch"}
+      ]
+    },
+    {
+      "id": "eval_15_non_publication_type_exclusion",
+      "category": "decomposition",
+      "query": "Papers on ketamine for depression, excluding animal studies",
+      "rationale": "The exclusion here is a species/subject filter, not a publication type exclusion like case reports. Agent must apply it via the correct field (e.g. humans[MeSH Terms] restriction) rather than misusing Publication Type.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args": {"db": "pubmed", "term": "includes a humans[MeSH Terms] restriction, not a Publication Type exclusion"}},
+        {"step": 2, "tool": "e_fetch"}
+      ]
+    },
+    {
+      "id": "eval_16_multi_db_orchestration",
+      "category": "db_selection",
+      "query": "Show me both the literature on BRCA1 mutations and the associated gene record",
+      "rationale": "Query explicitly asks for two different kinds of records from two different databases in one request; agent must orchestrate both rather than picking only one.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args": {"db": "gene", "term": "BRCA1"}},
+        {"step": 2, "tool": "e_fetch", "args": {"db": "gene"}},
+        {"step": 3, "tool": "e_search", "args": {"db": "pubmed", "term": "BRCA1 mutations"}},
+        {"step": 4, "tool": "e_fetch", "args": {"db": "pubmed"}}
+      ]
+    },
+    {
+      "id": "eval_17_refine_loop_max_retry",
+      "category": "refine_loop",
+      "query": "Papers combining seven highly specific, mutually narrowing filters on a rare condition, engineered so no realistic broadening converges on a usable result count",
+      "rationale": "Tests that the refine loop terminates on a retry cap rather than looping indefinitely when broadening doesn't help.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search"},
+        {"step": 2, "tool": "e_search", "purpose": "refine attempt 1"},
+        {"step": 3, "tool": "e_search", "purpose": "refine attempt 2"},
+        {"step": 4, "tool": "e_search", "purpose": "refine attempt 3, agent should stop here and report the limitation rather than continue"}
+      ]
+    },
+    {
+      "id": "eval_18_rate_limit_backoff",
+      "category": "error_handling",
+      "query": "Papers on long COVID cognitive symptoms",
+      "rationale": "Simulated NCBI 429/rate-limit response on the first call. Agent should back off and retry rather than surfacing the raw error or abandoning the query.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "purpose": "first attempt, simulated rate-limit error returned"},
+        {"step": 2, "tool": "e_search", "purpose": "retried after backoff, succeeds"},
+        {"step": 3, "tool": "e_fetch"}
+      ]
+    },
+    {
+      "id": "eval_19_double_curation_epost",
+      "category": "scale_handling",
+      "query": "Papers on statins and cardiovascular outcomes, give me only the ones most directly relevant to primary prevention",
+      "rationale": "Broad initial query followed by a second, tighter relevance filter should curate twice, not fetch full text for the entire first-pass set.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search"},
+        {"step": 2, "tool": "e_fetch", "purpose": "bounded sample for first-pass relevance scoring"},
+        {"step": 3, "tool": "e_post", "purpose": "curate to broadly relevant subset"},
+        {"step": 4, "tool": "e_fetch", "purpose": "fetch curated subset for finer primary-prevention relevance scoring"},
+        {"step": 5, "tool": "e_post", "purpose": "curate again to the final, tightly relevant subset"},
+        {"step": 6, "tool": "e_fetch", "purpose": "final fetch of the doubly-curated set"}
+      ]
+    },
+    {
+      "id": "eval_20_non_english_query",
+      "category": "decomposition",
+      "query": "Artículos sobre la hipertensión en pacientes ancianos",
+      "rationale": "Entrez/MeSH indexing is English. Agent must translate the query intent to English biomedical terms before constructing the Entrez query, not submit the Spanish term directly.",
+      "expected_trajectory": [
+        {"step": 1, "tool": "e_search", "args": {"db": "pubmed", "term": "constructed in English (e.g. hypertension[MeSH Terms] AND aged[MeSH Terms]), not the original Spanish phrase"}},
+        {"step": 2, "tool": "e_fetch"}
+      ]
+    }
+  ]
+}
